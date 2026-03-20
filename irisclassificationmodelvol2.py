@@ -6,6 +6,7 @@ from sklearn.preprocessing import LabelEncoder #label encoding
 from sklearn.model_selection import train_test_split
 from torchmetrics.classification import MulticlassAccuracy, MulticlassConfusionMatrix
 from torchmetrics.utilities.plot import plot_confusion_matrix
+import numpy as np
 
 df = pd.read_csv("09-iris.csv")
 
@@ -95,3 +96,32 @@ print(matrix)
 
 plot_confusion_matrix(matrix)
 plt.show()
+
+
+from pathlib import Path
+
+MODEL_PATH = Path("models")
+MODEL_PATH.mkdir(parents=True, exist_ok=True)
+
+MODEL_NAME = "iris_classification_model.pth"
+MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
+
+torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)
+
+loaded_model = IrisClassificationModel()
+
+loaded_model.load_state_dict(torch.load(MODEL_SAVE_PATH))
+
+new_sample = np.array([[5.1, 3.5, 1.4, 0.2]])
+new_sample_tensor = torch.tensor(new_sample, dtype=torch.float32)
+loaded_model.eval()
+with torch.inference_mode():
+    logits = loaded_model(new_sample_tensor)
+    probs = torch.softmax(logits, dim=1)
+    predicted_class = torch.argmax(probs, dim=1).item()
+print(le.inverse_transform([predicted_class])[0])
+
+is_equal = all(torch.equal(model.state_dict()[k], loaded_model.state_dict()[k]) for k in model.state_dict().keys())
+
+print(is_equal)
+
